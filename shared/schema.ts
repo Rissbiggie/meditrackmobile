@@ -22,6 +22,12 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   phone: text("phone").notNull(),
   role: text("role").notNull().default(UserRole.USER),
+  isEmailVerified: boolean("is_email_verified").default(false),
+  verificationToken: text("verification_token"),
+  verificationExpiry: timestamp("verification_expiry"),
+  resetToken: text("reset_token"),
+  resetExpiry: timestamp("reset_expiry"),
+  lastLoginAt: timestamp("last_login_at")
 });
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -33,19 +39,38 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   emergencyAlerts: many(emergencyAlerts),
 }));
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  firstName: true,
-  lastName: true,
-  email: true,
-  phone: true,
-  role: true,
+export const userSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  email: z.string().email(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  role: z.nativeEnum(UserRole),
+  phone: z.string(),
+  password: z.string(),
+  isEmailVerified: z.boolean().default(false),
+  verificationToken: z.string().optional(),
+  verificationExpiry: z.date().optional(),
+  resetToken: z.string().optional(),
+  resetExpiry: z.date().optional(),
+  lastLoginAt: z.date().optional()
 });
 
 export const loginUserSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
+});
+
+export const insertUserSchema = userSchema.omit({ 
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isEmailVerified: true,
+  verificationToken: true,
+  verificationExpiry: true,
+  resetToken: true,
+  resetExpiry: true,
+  lastLoginAt: true
 });
 
 // Medical info table
@@ -175,9 +200,9 @@ export const insertMedicalFacilitySchema = createInsertSchema(medicalFacilities)
 });
 
 // Types export
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = z.infer<typeof userSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type MedicalInfo = typeof medicalInfo.$inferSelect;
 export type InsertMedicalInfo = z.infer<typeof insertMedicalInfoSchema>;

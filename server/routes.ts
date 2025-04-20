@@ -267,6 +267,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health check endpoint
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Check database connection
+      const dbStatus = await storage.getUserCount() !== undefined;
+      
+      // Check ambulance service
+      const ambulances = await storage.getAmbulanceUnits();
+      const ambulanceStatus = ambulances.length > 0;
+      
+      // Check medical facilities
+      const facilities = await storage.getMedicalFacilities();
+      const facilitiesStatus = facilities.length > 0;
+      
+      return res.json({
+        status: "operational",
+        services: {
+          database: {
+            status: dbStatus ? "operational" : "degraded",
+            message: dbStatus ? "Database connection is healthy" : "Database connection issues detected"
+          },
+          ambulanceService: {
+            status: ambulanceStatus ? "operational" : "degraded",
+            message: ambulanceStatus ? "Ambulance service is available" : "No ambulance units available"
+          },
+          medicalFacilities: {
+            status: facilitiesStatus ? "operational" : "degraded",
+            message: facilitiesStatus ? "Medical facilities are available" : "No medical facilities available"
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Health check failed:", error);
+      return res.status(500).json({
+        status: "degraded",
+        message: "System health check failed",
+        error: error.message
+      });
+    }
+  });
 
   // Create HTTP server
   const httpServer = createServer(app);

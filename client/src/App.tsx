@@ -4,20 +4,34 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { EmergencyProvider } from "@/hooks/use-emergency";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import NotFound from "@/pages/not-found";
-import HomePage from "@/pages/home-page";
-import AuthPage from "@/pages/auth-page";
-import DashboardPage from "@/pages/dashboard-page";
-import ServicesPage from "@/pages/services-page";
-import SettingsPage from "@/pages/settings-page";
-import AdminPage from "@/pages/admin-page";
-import ResponseTeamPage from "@/pages/response-team-page";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { UserRole } from "@shared/schema";
 import { useEffect } from "react";
 import { connectWebSocket } from "@/lib/websocket";
 
-function App() {
+// Lazy load components
+const HomePage = lazy(() => import("@/pages/home-page"));
+const AuthPage = lazy(() => import("@/pages/auth-page"));
+const DashboardPage = lazy(() => import("@/pages/dashboard-page"));
+const ServicesPage = lazy(() => import("@/pages/services-page"));
+const SettingsPage = lazy(() => import("@/pages/settings-page"));
+const AdminPage = lazy(() => import("@/pages/admin-page"));
+const ResponseTeamPage = lazy(() => import("@/pages/response-team-page"));
+const VerifyEmailPage = lazy(() => import("@/pages/verify-email"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen bg-primary">
+    <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+  </div>
+);
+
+export default function App() {
   useEffect(() => {
     connectWebSocket();
   }, []);
@@ -26,38 +40,32 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <EmergencyProvider>
-          <Switch>
-            <Route path="/home">
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            </Route>
-            <ProtectedRoute path="/" component={HomePage} />
-            <ProtectedRoute path="/dashboard" component={DashboardPage} />
-            <ProtectedRoute path="/services" component={ServicesPage} />
-            <ProtectedRoute path="/settings" component={SettingsPage} />
-            <ProtectedRoute 
-              path="/admin" 
-              component={AdminPage} 
-              allowedRoles={[UserRole.ADMIN]} 
-            />
-            <ProtectedRoute 
-              path="/response-team" 
-              component={ResponseTeamPage} 
-              allowedRoles={[UserRole.RESPONSE_TEAM]} 
-            />
-            <Route path="/auth">
-              <AuthPage />
-            </Route>
-            <Route>
-              <NotFound />
-            </Route>
-          </Switch>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Switch>
+              <Route path="/auth" component={AuthPage} />
+              <Route path="/verify-email/:token" component={VerifyEmailPage} />
+              <Route path="/reset-password/:token" component={ResetPasswordPage} />
+              <Route path="/forgot-password" component={ForgotPasswordPage} />
+              <ProtectedRoute path="/" component={HomePage} />
+              <ProtectedRoute path="/dashboard" component={DashboardPage} />
+              <ProtectedRoute path="/services" component={ServicesPage} />
+              <ProtectedRoute path="/settings" component={SettingsPage} />
+              <ProtectedRoute 
+                path="/admin" 
+                component={AdminPage} 
+                allowedRoles={[UserRole.ADMIN]} 
+              />
+              <ProtectedRoute 
+                path="/response-team" 
+                component={ResponseTeamPage}
+                allowedRoles={[UserRole.RESPONSE_TEAM]} 
+              />
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
           <Toaster />
         </EmergencyProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;

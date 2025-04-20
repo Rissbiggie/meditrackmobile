@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Bell, Menu, LogOut } from "lucide-react";
+import { Bell, Menu, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,7 +18,9 @@ export function AppHeader({ title = "MediTrack" }: AppHeaderProps) {
   const [location, setLocation] = useLocation();
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    if (!logoutMutation.isPending) {
+      logoutMutation.mutate();
+    }
   };
 
   const getUserRoleBadge = () => {
@@ -101,9 +103,19 @@ export function AppHeader({ title = "MediTrack" }: AppHeaderProps) {
                 variant="ghost" 
                 className="justify-start mt-auto text-white/80 hover:text-white hover:bg-white/10"
                 onClick={handleLogout}
+                disabled={logoutMutation.isPending}
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                {logoutMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing out...
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </>
+                )}
               </Button>
             </div>
           </SheetContent>

@@ -1,36 +1,40 @@
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { cn } from '@/lib/utils';
 
-interface HeartbeatProps {
-  size?: "sm" | "md" | "lg";
-  className?: string;
+interface HeartbeatProps extends React.HTMLAttributes<HTMLDivElement> {
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function Heartbeat({ size = "md", className }: HeartbeatProps) {
-  const sizeClasses = {
-    sm: "w-8 h-8",
-    md: "w-12 h-12",
-    lg: "w-16 h-16",
+export function Heartbeat({ className, size = 'md', ...props }: HeartbeatProps) {
+  const sizeMap = {
+    sm: 'h-6 w-6',
+    md: 'h-12 w-12',
+    lg: 'h-16 w-16',
   };
 
   return (
-    <svg
-      className={cn(sizeClasses[size], className)}
-      viewBox="0 0 100 100"
-      xmlns="http://www.w3.org/2000/svg"
+    <div
+      className={cn(
+        'relative animate-heartbeat',
+        sizeMap[size],
+        className
+      )}
+      {...props}
     >
-      <path
-        d="M10,50 L30,50 L40,30 L50,70 L60,50 L70,50 L80,35 L90,50"
+      <svg
+        viewBox="0 0 24 24"
         fill="none"
-        stroke="#FF0000"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Red Cross */}
-      <path
-        d="M45,40 L55,40 L55,45 L60,45 L60,55 L55,55 L55,60 L45,60 L45,55 L40,55 L40,45 L45,45 Z"
-        fill="#FF0000"
-      />
-    </svg>
+        xmlns="http://www.w3.org/2000/svg"
+        className="w-full h-full"
+      >
+        <path
+          d="M12 2L12 22M2 12L22 12"
+          stroke="currentColor"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
   );
-}
+} 

@@ -16,7 +16,9 @@ import {
   type AmbulanceUnit,
   type InsertAmbulanceUnit,
   type MedicalFacility,
-  type InsertMedicalFacility
+  type InsertMedicalFacility,
+  messages,
+  UserRole
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -65,7 +67,307 @@ export interface IStorage {
   
   // Session storage
   sessionStore: any; // Express session store instance
+
+  // New methods for email verification and password reset
+  getUserByVerificationToken(token: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  verifyEmail(userId: number): Promise<void>;
+  setPasswordResetToken(userId: number, token: string, expiry: Date): Promise<void>;
+  clearResetToken(userId: number): Promise<void>;
+  updatePassword(userId: number, hashedPassword: string): Promise<void>;
+  updateLastLogin(userId: number): Promise<void>;
+  getUserByEmail(email: string): Promise<User | undefined>;
 }
+
+export const storage = {
+  sessionStore: null as any, // Express session store instance
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user ? {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    } : undefined;
+  },
+
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user ? {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    } : undefined;
+  },
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values({
+      ...userData,
+      isEmailVerified: false,
+      verificationToken: null,
+      verificationExpiry: null,
+      resetToken: null,
+      resetExpiry: null,
+      lastLoginAt: null,
+      role: userData.role || UserRole.USER
+    }).returning();
+    return {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    };
+  },
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    return await db.query.users.findFirst({
+      where: eq(users.verificationToken, token)
+    });
+  },
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    return await db.query.users.findFirst({
+      where: eq(users.resetToken, token)
+    });
+  },
+
+  async verifyEmail(userId: number): Promise<void> {
+    await db.update(users)
+      .set({ 
+        isEmailVerified: true,
+        verificationToken: null,
+        verificationExpiry: null
+      })
+      .where(eq(users.id, userId));
+  },
+
+  async setPasswordResetToken(userId: number, token: string, expiry: Date): Promise<void> {
+    await db.update(users)
+      .set({ 
+        resetToken: token,
+        resetExpiry: expiry
+      })
+      .where(eq(users.id, userId));
+  },
+
+  async clearResetToken(userId: number): Promise<void> {
+    await db.update(users)
+      .set({ 
+        resetToken: null,
+        resetExpiry: null
+      })
+      .where(eq(users.id, userId));
+  },
+
+  async updatePassword(userId: number, hashedPassword: string): Promise<void> {
+    await db.update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+  },
+
+  async updateLastLogin(userId: number): Promise<void> {
+    await db.update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, userId));
+  },
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user ? {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    } : undefined;
+  },
+
+  // Medical info operations
+  async getMedicalInfoByUserId(userId: number): Promise<MedicalInfo | undefined> {
+    const [info] = await db.select()
+      .from(medicalInfo)
+      .where(eq(medicalInfo.userId, userId));
+    return info;
+  },
+
+  async updateMedicalInfo(info: InsertMedicalInfo): Promise<MedicalInfo> {
+    const [updatedInfo] = await db.update(medicalInfo)
+      .set(info)
+      .where(eq(medicalInfo.userId, info.userId))
+      .returning();
+    return updatedInfo;
+  },
+
+  // Emergency alert operations
+  async getActiveEmergencies(): Promise<EmergencyAlert[]> {
+    return await db.select()
+      .from(emergencyAlerts)
+      .where(eq(emergencyAlerts.status, 'active'))
+      .orderBy(desc(emergencyAlerts.createdAt));
+  },
+
+  async getUserEmergencyHistory(userId: number): Promise<EmergencyAlert[]> {
+    return await db.select()
+      .from(emergencyAlerts)
+      .where(eq(emergencyAlerts.userId, userId))
+      .orderBy(desc(emergencyAlerts.createdAt));
+  },
+
+  async getRecentEmergencies(): Promise<EmergencyAlert[]> {
+    return await db.select()
+      .from(emergencyAlerts)
+      .orderBy(desc(emergencyAlerts.createdAt))
+      .limit(5);
+  },
+
+  async resolveEmergency(id: number): Promise<EmergencyAlert> {
+    const [updatedEmergency] = await db.update(emergencyAlerts)
+      .set({ status: 'resolved' })
+      .where(eq(emergencyAlerts.id, id))
+      .returning();
+    return updatedEmergency;
+  },
+
+  async assignAmbulance(emergencyId: number, ambulanceId: number): Promise<EmergencyAlert> {
+    const [updatedEmergency] = await db.update(emergencyAlerts)
+      .set({ ambulanceId })
+      .where(eq(emergencyAlerts.id, emergencyId))
+      .returning();
+    return updatedEmergency;
+  },
+
+  // Ambulance operations
+  async getAmbulanceUnits(): Promise<AmbulanceUnit[]> {
+    return await db.select().from(ambulanceUnits);
+  },
+  
+  async getAvailableAmbulanceUnits(): Promise<AmbulanceUnit[]> {
+    return await db.select()
+      .from(ambulanceUnits)
+      .where(eq(ambulanceUnits.status, "available"));
+  },
+  
+  async getNearbyAmbulances(lat: number, lng: number): Promise<AmbulanceUnit[]> {
+    // First get all ambulances
+    const allAmbulances = await db.select().from(ambulanceUnits);
+    
+    // Filter and sort by distance
+    return allAmbulances
+      .filter(unit => {
+        if (!unit.latitude || !unit.longitude) return false;
+        
+        const distance = calculateDistance(
+          lat, 
+          lng, 
+          parseFloat(unit.latitude), 
+          parseFloat(unit.longitude)
+        );
+        
+        return distance <= 10; // Within 10km
+      })
+      .sort((a, b) => {
+        // Sort by distance
+        const distA = calculateDistance(
+          lat, 
+          lng, 
+          parseFloat(a.latitude || "0"), 
+          parseFloat(a.longitude || "0")
+        );
+        const distB = calculateDistance(
+          lat, 
+          lng, 
+          parseFloat(b.latitude || "0"), 
+          parseFloat(b.longitude || "0")
+        );
+        return distA - distB;
+      });
+  },
+  
+  async updateAmbulanceStatus(id: number, status: string): Promise<AmbulanceUnit> {
+    const [updatedAmbulance] = await db.update(ambulanceUnits)
+      .set({ status })
+      .where(eq(ambulanceUnits.id, id))
+      .returning();
+    
+    if (!updatedAmbulance) {
+      throw new Error("Ambulance unit not found");
+    }
+    
+    return updatedAmbulance;
+  },
+  
+  async updateAmbulanceLocation(id: number, lat: number, lng: number): Promise<AmbulanceUnit> {
+    const [updatedAmbulance] = await db.update(ambulanceUnits)
+      .set({ 
+        latitude: lat.toString(), 
+        longitude: lng.toString() 
+      })
+      .where(eq(ambulanceUnits.id, id))
+      .returning();
+    
+    if (!updatedAmbulance) {
+      throw new Error("Ambulance unit not found");
+    }
+    
+    return updatedAmbulance;
+  },
+  
+  // Medical facility operations
+  async getMedicalFacilities(): Promise<MedicalFacility[]> {
+    return await db.select().from(medicalFacilities);
+  },
+  
+  async getNearbyFacilities(lat: number, lng: number): Promise<MedicalFacility[]> {
+    // Get all facilities
+    const allFacilities = await db.select().from(medicalFacilities);
+    
+    // Filter and sort by distance
+    return allFacilities
+      .filter(facility => {
+        const distance = calculateDistance(
+          lat, 
+          lng, 
+          parseFloat(facility.latitude), 
+          parseFloat(facility.longitude)
+        );
+        
+        return distance <= 10; // Within 10km
+      })
+      .sort((a, b) => {
+        // Sort by distance
+        const distA = calculateDistance(
+          lat, 
+          lng, 
+          parseFloat(a.latitude), 
+          parseFloat(a.longitude)
+        );
+        const distB = calculateDistance(
+          lat, 
+          lng, 
+          parseFloat(b.latitude), 
+          parseFloat(b.longitude)
+        );
+        return distA - distB;
+      });
+  }
+};
 
 export class DatabaseStorage implements IStorage {
   sessionStore: any; // SessionStore instance
@@ -84,17 +386,53 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    return user ? {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    } : undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    return user ? {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    } : undefined;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(userData).returning();
-    return user;
+    const [user] = await db.insert(users).values({
+      ...userData,
+      isEmailVerified: false,
+      verificationToken: null,
+      verificationExpiry: null,
+      resetToken: null,
+      resetExpiry: null,
+      lastLoginAt: null,
+      role: userData.role || UserRole.USER
+    }).returning();
+    return {
+      ...user,
+      role: user.role as UserRole,
+      isEmailVerified: user.isEmailVerified || false,
+      verificationToken: user.verificationToken || undefined,
+      verificationExpiry: user.verificationExpiry || undefined,
+      resetToken: user.resetToken || undefined,
+      resetExpiry: user.resetExpiry || undefined,
+      lastLoginAt: user.lastLoginAt || undefined
+    };
   }
   
   async getAllUsers(): Promise<User[]> {
@@ -103,25 +441,18 @@ export class DatabaseStorage implements IStorage {
   
   // Medical info operations
   async getMedicalInfoByUserId(userId: number): Promise<MedicalInfo | undefined> {
-    const [info] = await db.select().from(medicalInfo).where(eq(medicalInfo.userId, userId));
+    const [info] = await db.select()
+      .from(medicalInfo)
+      .where(eq(medicalInfo.userId, userId));
     return info;
   }
   
-  async updateMedicalInfo(infoData: InsertMedicalInfo): Promise<MedicalInfo> {
-    const existingInfo = await this.getMedicalInfoByUserId(infoData.userId);
-    
-    if (existingInfo) {
-      const [updatedInfo] = await db.update(medicalInfo)
-        .set(infoData)
-        .where(eq(medicalInfo.id, existingInfo.id))
-        .returning();
-      return updatedInfo;
-    } else {
-      const [newInfo] = await db.insert(medicalInfo)
-        .values(infoData)
-        .returning();
-      return newInfo;
-    }
+  async updateMedicalInfo(info: InsertMedicalInfo): Promise<MedicalInfo> {
+    const [updatedInfo] = await db.update(medicalInfo)
+      .set(info)
+      .where(eq(medicalInfo.userId, info.userId))
+      .returning();
+    return updatedInfo;
   }
   
   // Emergency contact operations
@@ -153,7 +484,7 @@ export class DatabaseStorage implements IStorage {
   async getActiveEmergencies(): Promise<EmergencyAlert[]> {
     return await db.select()
       .from(emergencyAlerts)
-      .where(eq(emergencyAlerts.status, "active"))
+      .where(eq(emergencyAlerts.status, 'active'))
       .orderBy(desc(emergencyAlerts.createdAt));
   }
   
@@ -398,5 +729,3 @@ export class DatabaseStorage implements IStorage {
     }
   }
 }
-
-export const storage = new DatabaseStorage();
