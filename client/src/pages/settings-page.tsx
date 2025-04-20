@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { Power } from "lucide-react";
+import { useLocation } from "wouter";
 import { AppHeader } from "@/components/layout/app-header";
 import { Navbar } from "@/components/layout/navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch as ToggleSwitch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/use-auth";
 import { EmergencyModal } from "@/components/modals/emergency-modal";
+import { User, Mail, ChevronRight, LogOut } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, logoutMutation } = useAuth();
+  const [, setLocation] = useLocation();
   const [settings, setSettings] = useState({
     notifications: true,
     locationTracking: true,
@@ -33,7 +35,7 @@ export default function SettingsPage() {
       <AppHeader title="Settings" />
 
       <main className="pt-20 px-4">
-        <div className="fade-in mb-6">
+        <div className="mb-6">
           <h2 className="text-white font-semibold text-xl mb-4">Settings</h2>
           
           {/* User Profile Card */}
@@ -41,17 +43,20 @@ export default function SettingsPage() {
             <CardContent className="p-4">
               <div className="flex items-center mb-4">
                 <div className="w-14 h-14 bg-white/20 rounded-full mr-3 flex items-center justify-center overflow-hidden">
-                  <i className="fas fa-user text-white/70 text-2xl"></i>
+                  <User className="text-white/70 text-2xl" />
                 </div>
                 <div>
                   <h3 className="text-white font-medium">{user ? `${user.firstName} ${user.lastName}` : "User"}</h3>
                   <p className="text-white/60 text-sm">{user?.email || "user@example.com"}</p>
                 </div>
                 <Button variant="ghost" size="icon" className="ml-auto bg-white/10 hover:bg-white/20 text-white rounded-full h-8 w-8 flex items-center justify-center">
-                  <i className="fas fa-pencil-alt text-sm"></i>
+                  <Mail className="text-sm" />
                 </Button>
               </div>
-              <Button className="w-full bg-secondary/20 hover:bg-secondary/30 text-secondary font-medium py-2 px-4 rounded-lg transition-all duration-300">
+              <Button 
+                className="w-full bg-secondary/20 hover:bg-secondary/30 text-secondary font-medium py-2 px-4 rounded-lg transition-all duration-300"
+                onClick={() => setLocation('/profile')}
+              >
                 View Profile
               </Button>
             </CardContent>
@@ -97,15 +102,15 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Emergency Contacts</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Medical Information</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Preferred Hospitals</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
               </div>
             </CardContent>
@@ -118,19 +123,19 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Help Center</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Contact Support</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Privacy Policy</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
                 <Button className="flex items-center justify-between w-full bg-white/5 hover:bg-white/10 p-3 rounded-lg text-left">
                   <span className="text-white font-medium text-sm">Terms of Service</span>
-                  <i className="fas fa-chevron-right text-white/60"></i>
+                  <ChevronRight className="text-white/60" />
                 </Button>
               </div>
             </CardContent>
@@ -141,7 +146,7 @@ export default function SettingsPage() {
             onClick={handleLogout}
             disabled={logoutMutation.isPending}
           >
-            <i className="fas fa-sign-out-alt mr-2"></i> Sign Out
+            <LogOut className="mr-2 h-4 w-4" /> Sign Out
           </Button>
         </div>
       </main>
@@ -166,7 +171,7 @@ function SettingToggle({ title, description, checked, onChange }: SettingToggleP
         <h4 className="text-white font-medium text-sm">{title}</h4>
         <p className="text-white/60 text-xs">{description}</p>
       </div>
-      <ToggleSwitch checked={checked} onCheckedChange={onChange} />
+      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }

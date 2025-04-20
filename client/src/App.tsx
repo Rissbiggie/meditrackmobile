@@ -22,6 +22,10 @@ const ResponseTeamPage = lazy(() => import("@/pages/response-team-page"));
 const VerifyEmailPage = lazy(() => import("@/pages/verify-email"));
 const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
 const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+const ProfilePage = lazy(() => import("@/pages/profile-page"));
+const FacilitiesPage = lazy(() => import("@/pages/facilities-page"));
+const SupportPage = lazy(() => import("@/pages/support-page"));
+const AppointmentsPage = lazy(() => import("@/pages/appointments-page"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 // Loading component
@@ -50,6 +54,10 @@ export default function App() {
               <ProtectedRoute path="/dashboard" component={DashboardPage} />
               <ProtectedRoute path="/services" component={ServicesPage} />
               <ProtectedRoute path="/settings" component={SettingsPage} />
+              <ProtectedRoute path="/profile" component={ProfilePage} />
+              <ProtectedRoute path="/facilities" component={FacilitiesPage} />
+              <ProtectedRoute path="/support" component={SupportPage} />
+              <ProtectedRoute path="/appointments" component={AppointmentsPage} />
               <ProtectedRoute 
                 path="/admin" 
                 component={AdminPage} 

@@ -22,14 +22,9 @@ export default function AuthPage() {
     );
   }
 
-  // Redirect if user is logged in and not on auth page
-  if (user && location !== "/auth") {
+  // Redirect if user is logged in
+  if (user) {
     return <Redirect to="/" />;
-  }
-
-  // Don't redirect if we're already on the auth page
-  if (user && location === "/auth") {
-    return null;
   }
 
   const handleLogin = (credentials: LoginUser) => {
