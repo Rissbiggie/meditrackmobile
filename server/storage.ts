@@ -77,6 +77,19 @@ export interface IStorage {
   updatePassword(userId: number, hashedPassword: string): Promise<void>;
   updateLastLogin(userId: number): Promise<void>;
   getUserByEmail(email: string): Promise<User | undefined>;
+
+  // User count
+  getUserCount(): Promise<number>;
+
+  // Support operations
+  getSupportAgents(): Promise<any[]>;
+  createChatSession(userId: number): Promise<any>;
+  storeChatMessage(sessionId: string, message: string): Promise<any>;
+
+  // Checkup operations
+  getAvailableTimeSlots(hospitalId: number, date: string): Promise<any[]>;
+  scheduleCheckup(data: any): Promise<any>;
+  getUserCheckups(userId: number): Promise<any[]>;
 }
 
 export const storage = {
@@ -366,6 +379,84 @@ export const storage = {
         );
         return distA - distB;
       });
+  },
+
+  async getUserCount(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` }).from(users);
+    return Number(result[0].count);
+  },
+
+  // Support operations
+  async getSupportAgents(): Promise<any[]> {
+    // Mock implementation
+    return [
+      { id: 1, name: "Dr. Smith", specialty: "General Medicine", isAvailable: true },
+      { id: 2, name: "Dr. Johnson", specialty: "Emergency Care", isAvailable: true },
+      { id: 3, name: "Dr. Williams", specialty: "Cardiology", isAvailable: true }
+    ];
+  },
+
+  async createChatSession(userId: number): Promise<any> {
+    // Mock implementation
+    return {
+      id: Date.now().toString(),
+      userId,
+      startTime: new Date(),
+      status: 'active'
+    };
+  },
+
+  async storeChatMessage(sessionId: string, message: string): Promise<any> {
+    // Mock implementation
+    return {
+      id: Date.now().toString(),
+      sessionId,
+      text: message,
+      timestamp: new Date()
+    };
+  },
+
+  // Checkup operations
+  async getAvailableTimeSlots(hospitalId: number, date: string): Promise<any[]> {
+    // Mock implementation
+    return [
+      { id: "1", startTime: "09:00", endTime: "10:00", isAvailable: true },
+      { id: "2", startTime: "10:00", endTime: "11:00", isAvailable: true },
+      { id: "3", startTime: "11:00", endTime: "12:00", isAvailable: false },
+      { id: "4", startTime: "14:00", endTime: "15:00", isAvailable: true }
+    ];
+  },
+
+  async scheduleCheckup(data: any): Promise<any> {
+    // Mock implementation
+    return {
+      id: Date.now(),
+      ...data,
+      hospitalName: "Central Hospital",
+      status: 'scheduled'
+    };
+  },
+
+  async getUserCheckups(userId: number): Promise<any[]> {
+    // Mock implementation
+    return [
+      {
+        id: 1,
+        hospitalName: "Central Hospital",
+        date: "2024-03-20",
+        timeSlot: "09:00",
+        reason: "Annual checkup",
+        status: 'scheduled'
+      },
+      {
+        id: 2,
+        hospitalName: "City Medical Center",
+        date: "2024-03-15",
+        timeSlot: "14:00",
+        reason: "Follow-up",
+        status: 'completed'
+      }
+    ];
   }
 };
 

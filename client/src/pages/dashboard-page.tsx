@@ -10,6 +10,7 @@ import { Heart, Activity, AlertTriangle, Clock, Bell, Plus, Calendar, MapPin, Ph
 import { useState } from "react";
 import { MedicalInfoForm } from "@/components/medical-info-form";
 import { HealthStatus } from "@/components/health-status";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
 export default function DashboardPage() {
   const { userEmergencyHistory = [], openEmergencyModal } = useEmergency();
   const [showMedicalInfoForm, setShowMedicalInfoForm] = useState(false);
+  const [, setLocation] = useLocation();
   
   // Query for medical information
   const { data: medicalInfo } = useQuery<MedicalInfo | null>({
@@ -29,9 +31,9 @@ export default function DashboardPage() {
   // Mock data for quick actions
   const quickActions = [
     { icon: <Phone className="h-5 w-5" />, label: "Call Emergency", action: () => window.location.href = 'tel:911' },
-    { icon: <MapPin className="h-5 w-5" />, label: "Find Hospital", action: () => window.location.href = '/facilities' },
-    { icon: <MessageSquare className="h-5 w-5" />, label: "Chat Support", action: () => window.location.href = '/support' },
-    { icon: <Calendar className="h-5 w-5" />, label: "Schedule Checkup", action: () => window.location.href = '/appointments' },
+    { icon: <MapPin className="h-5 w-5" />, label: "Find Hospital", action: () => setLocation('/facilities') },
+    { icon: <MessageSquare className="h-5 w-5" />, label: "Chat Support", action: () => setLocation('/support') },
+    { icon: <Calendar className="h-5 w-5" />, label: "Schedule Checkup", action: () => setLocation('/appointments') },
   ];
 
   // Mock data for recent activity

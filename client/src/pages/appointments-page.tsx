@@ -8,6 +8,8 @@ import { EmergencyModal } from "@/components/modals/emergency-modal";
 import { Calendar, Clock, MapPin, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getAvailableTimeSlots, scheduleCheckup, getScheduledCheckups } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface TimeSlot {
   id: string;
@@ -29,35 +31,66 @@ export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedHospital, setSelectedHospital] = useState("");
   const [reason, setReason] = useState("");
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   // Get available time slots
-  const { data: timeSlots } = useQuery<TimeSlot[]>({
+  const { data: timeSlots, isLoading: isLoadingTimeSlots, error: timeSlotsError } = useQuery<TimeSlot[]>({
     queryKey: ['timeSlots', selectedDate, selectedHospital],
     queryFn: async () => {
       if (!selectedDate || !selectedHospital) return [];
       return getAvailableTimeSlots(parseInt(selectedHospital), selectedDate);
     },
-    enabled: !!selectedDate && !!selectedHospital
+    enabled: !!selectedDate && !!selectedHospital,
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to load available time slots. Please try again later.",
+        variant: "destructive"
+      });
+    }
   });
 
   // Get scheduled checkups
-  const { data: scheduledCheckups } = useQuery<ScheduledCheckup[]>({
+  const { data: scheduledCheckups, isLoading: isLoadingCheckups, error: checkupsError } = useQuery<ScheduledCheckup[]>({
     queryKey: ['scheduledCheckups'],
     queryFn: async () => {
-      // In a real app, we would get the user's ID from the auth context
-      const userId = 1; // Temporary user ID
-      return getScheduledCheckups(userId);
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      return getScheduledCheckups(user.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to load scheduled checkups. Please try again later.",
+        variant: "destructive"
+      });
     }
   });
 
   const handleScheduleCheckup = async () => {
-    if (!selectedDate || !selectedHospital || !timeSlots?.[0] || !reason) return;
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to schedule a checkup.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedDate || !selectedHospital || !timeSlots?.[0] || !reason) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
-      // In a real app, we would get the user's ID from the auth context
-      const userId = 1; // Temporary user ID
       await scheduleCheckup({
-        userId,
+        userId: user.id,
         hospitalId: parseInt(selectedHospital),
         date: selectedDate,
         timeSlot: timeSlots[0].startTime,
@@ -68,10 +101,46 @@ export default function AppointmentsPage() {
       setSelectedDate("");
       setSelectedHospital("");
       setReason("");
+
+      toast({
+        title: "Success",
+        description: "Checkup scheduled successfully.",
+      });
     } catch (error) {
       console.error('Failed to schedule checkup:', error);
+      toast({
+        title: "Error",
+        description: "Failed to schedule checkup. Please try again.",
+        variant: "destructive"
+      });
     }
   };
+
+  if (isLoadingTimeSlots || isLoadingCheckups) {
+    return (
+      <div className="min-h-screen bg-primary pb-20">
+        <AppHeader title="Schedule Checkup" />
+        <main className="pt-20 px-4">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (timeSlotsError || checkupsError) {
+    return (
+      <div className="min-h-screen bg-primary pb-20">
+        <AppHeader title="Schedule Checkup" />
+        <main className="pt-20 px-4">
+          <div className="text-white/60 text-center">
+            Failed to load data. Please try again later.
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-primary pb-20">

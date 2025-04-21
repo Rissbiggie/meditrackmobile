@@ -308,6 +308,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Support routes
+  app.get("/api/support/agents", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      // Mock support agents data for now
+      const agents = [
+        { id: 1, name: "Dr. Smith", specialty: "General Medicine", isAvailable: true },
+        { id: 2, name: "Dr. Johnson", specialty: "Emergency Care", isAvailable: true },
+        { id: 3, name: "Dr. Williams", specialty: "Cardiology", isAvailable: true }
+      ];
+      return res.json(agents);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error retrieving support agents:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/support/chat", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const { userId } = req.body;
+      // Create a new chat session
+      const session = {
+        id: Date.now().toString(),
+        userId,
+        startTime: new Date(),
+        status: 'active'
+      };
+      return res.json(session);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error starting chat session:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/support/chat/:sessionId/message", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const { sessionId } = req.params;
+      const { message } = req.body;
+      // Store the message
+      const storedMessage = {
+        id: Date.now().toString(),
+        sessionId,
+        text: message,
+        timestamp: new Date()
+      };
+      return res.json(storedMessage);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error sending chat message:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Appointments routes
+  app.get("/api/checkups/slots", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const { hospitalId, date } = req.query;
+      if (!hospitalId || !date) {
+        return res.status(400).json({ message: "Hospital ID and date are required" });
+      }
+
+      // Mock time slots data
+      const timeSlots = [
+        { id: "1", startTime: "09:00", endTime: "10:00", isAvailable: true },
+        { id: "2", startTime: "10:00", endTime: "11:00", isAvailable: true },
+        { id: "3", startTime: "11:00", endTime: "12:00", isAvailable: false },
+        { id: "4", startTime: "14:00", endTime: "15:00", isAvailable: true }
+      ];
+      return res.json(timeSlots);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error retrieving time slots:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/checkups/schedule", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const { userId, hospitalId, date, timeSlot, reason } = req.body;
+      if (!userId || !hospitalId || !date || !timeSlot || !reason) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Mock scheduled checkup data
+      const checkup = {
+        id: Date.now(),
+        userId,
+        hospitalId,
+        hospitalName: "Central Hospital", // Mock hospital name
+        date,
+        timeSlot,
+        reason,
+        status: 'scheduled' as const
+      };
+      return res.json(checkup);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error scheduling checkup:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/checkups/user/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const { userId } = req.params;
+      // Mock user's scheduled checkups
+      const checkups = [
+        {
+          id: 1,
+          hospitalName: "Central Hospital",
+          date: "2024-03-20",
+          timeSlot: "09:00",
+          reason: "Annual checkup",
+          status: 'scheduled' as const
+        },
+        {
+          id: 2,
+          hospitalName: "City Medical Center",
+          date: "2024-03-15",
+          timeSlot: "14:00",
+          reason: "Follow-up",
+          status: 'completed' as const
+        }
+      ];
+      return res.json(checkups);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error retrieving user checkups:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
 

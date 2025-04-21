@@ -8,6 +8,8 @@ import { EmergencyModal } from "@/components/modals/emergency-modal";
 import { MessageSquare, Send, User, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupportAgents, startChatSession, sendChatMessage } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -20,18 +22,34 @@ export default function SupportPage() {
   const [message, setMessage] = useState("");
   const [chatSession, setChatSession] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   // Get available support agents
-  const { data: supportAgents } = useQuery({
+  const { data: supportAgents, isLoading, error } = useQuery({
     queryKey: ['supportAgents'],
-    queryFn: getSupportAgents
+    queryFn: getSupportAgents,
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to load support agents. Please try again later.",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleStartChat = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to start a chat session.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      // In a real app, we would get the user's ID from the auth context
-      const userId = 1; // Temporary user ID
-      const session = await startChatSession(userId);
+      const session = await startChatSession(user.id);
       setChatSession(session.id);
       setMessages([{
         id: '1',
@@ -41,6 +59,11 @@ export default function SupportPage() {
       }]);
     } catch (error) {
       console.error('Failed to start chat session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start chat session. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -72,8 +95,39 @@ export default function SupportPage() {
       }, 1000);
     } catch (error) {
       console.error('Failed to send message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-primary pb-20">
+        <AppHeader title="Chat Support" />
+        <main className="pt-20 px-4">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-primary pb-20">
+        <AppHeader title="Chat Support" />
+        <main className="pt-20 px-4">
+          <div className="text-white/60 text-center">
+            Failed to load support agents. Please try again later.
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-primary pb-20">
