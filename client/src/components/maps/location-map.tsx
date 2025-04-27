@@ -8,6 +8,8 @@ interface LocationMapProps {
   className?: string;
 }
 
+// IMPORTANT: Set your Google Maps API key in a .env file as VITE_GOOGLE_MAPS_API_KEY=your_key_here
+
 export function LocationMap({ 
   latitude, 
   longitude, 
@@ -22,8 +24,17 @@ export function LocationMap({
     // Initialize map when component mounts
     if (!mapRef.current) return;
 
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.error('Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file.');
+      if (mapRef.current) {
+        mapRef.current.innerHTML = '<div style="color: red; padding: 1em;">Google Maps API key is missing. Please contact the site administrator.</div>';
+      }
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBniFa_mO6eSvzeS_yJi_kZLTvIwHcmpgQ'}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
     script.onload = initMap;
     document.head.appendChild(script);
